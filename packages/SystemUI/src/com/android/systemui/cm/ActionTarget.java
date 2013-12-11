@@ -107,6 +107,12 @@ public class ActionTarget {
         } else if (action.equals(ACTION_STANDBY)) {
             injectKeyDelayed(KeyEvent.KEYCODE_POWER);
             return true;
+        } else if (action.equals(ACTION_POWER_MENU)) {
+            try {
+                windowManagerService.toggleGlobalMenu();
+            } catch (RemoteException e) {
+            }
+            return true;
         } else if (action.equals(ACTION_IME_SWITCHER)) {
             mContext.sendBroadcast(new Intent("android.settings.SHOW_INPUT_METHOD_PICKER"));
             return true;
