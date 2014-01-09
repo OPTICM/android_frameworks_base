@@ -17,6 +17,7 @@
 package com.android.keyguard;
 
 import android.content.Context;
+import android.os.UserHandle;
 import android.provider.Settings;
 import android.text.Editable;
 import android.text.InputType;
@@ -79,30 +80,24 @@ public class KeyguardPINView extends KeyguardAbsKeyInputView
             ok.setOnHoverListener(new LiftToActivateListener(getContext()));
         }
 
-        boolean scramblePin = (Settings.System.getInt(getContext().getContentResolver(),
-                Settings.System.LOCKSCREEN_PIN_SCRAMBLE_LAYOUT, 0) == 1);
+	final int randomDigitMode = Settings.Secure.getIntForUser(
+            mContext.getContentResolver(), Settings.Secure.LOCK_NUMPAD_RANDOM,
+            0, UserHandle.USER_CURRENT);
 
-        if (scramblePin) {
-            Collections.shuffle(sNumbers);
-            // get all children who are NumPadKey's
-            LinearLayout bouncer = (LinearLayout) findViewById(R.id.keyguard_bouncer_frame);
-            List<NumPadKey> views = new ArrayList<NumPadKey>();
-            for (int i = 0; i < bouncer.getChildCount(); i++) {
-                if (bouncer.getChildAt(i) instanceof LinearLayout) {
-                    LinearLayout nestedLayout = ((LinearLayout) bouncer.getChildAt(i));
-                    for (int j = 0; j < nestedLayout.getChildCount(); j++){
-                        View view = nestedLayout.getChildAt(j);
-                        if (view.getClass() == NumPadKey.class) {
-                            views.add((NumPadKey) view);
-                        }
-                    }
-                }
+        if (randomDigitMode > 0) {
+            final View randomButton = findViewById(R.id.key_random);
+            if (randomDigitMode == 1) {
+                buildRandomNumPadKey();
             }
-
-            // reset the digits in the views
-            for (int i = 0; i < sNumbers.size(); i++) {
-                NumPadKey view = views.get(i);
-                view.setDigit(sNumbers.get(i));
+            if (randomButton != null) {
+                randomButton.setVisibility(View.VISIBLE);
+                randomButton.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        doHapticKeyClick();
+                        buildRandomNumPadKey();
+                    }
+                });
             }
         }
 
@@ -140,6 +135,21 @@ public class KeyguardPINView extends KeyguardAbsKeyInputView
                 | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
 
         mPasswordEntry.requestFocus();
+    }
+
+    private void buildRandomNumPadKey() {
+        NumPadKey button;
+        for (int i = 0; i < 10; i++) {
+            button = (NumPadKey) findViewById(
+                mContext.getResources()
+                    .getIdentifier("com.android.keyguard:id/key" + i, null, null));
+            if (button != null) {
+                if (i == 0) {
+                    button.initNumKeyPad();
+                }
+                button.createNumKeyPad(true);
+            }
+        }
     }
 
     @Override
