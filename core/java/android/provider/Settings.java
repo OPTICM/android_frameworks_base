@@ -3916,6 +3916,11 @@ public final class Settings {
         public static final String LOCKSCREEN_MAXIMIZE_WIDGETS = "lockscreen_maximize_widgets";
 
         /**
+         * Show brightness slider in notification panel
+         * @hide
+         */
+        public static final String NOTIFICATION_BRIGHTNESS_SLIDER = "notification_brightness_slider";
+
          * Whether to unlock the screen with the home key.  The value is boolean (1 or 0).
          * @hide
          */
