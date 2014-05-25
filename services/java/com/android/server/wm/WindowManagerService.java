@@ -11074,6 +11074,18 @@ public class WindowManagerService extends IWindowManager.Stub
         return mWindowMap;
     }
 
+    /* @hide */
+    @Override
+    public void toggleGlobalMenu() {
+        mPolicy.toggleGlobalMenu();
+    }
+
+    /* @hide */
+    @Override
+    public void toggleStatusBar() {
+        mPolicy.toggleStatusBar();
+    }
+
     @Override
     public void addSystemUIVisibilityFlag(int flag) {
         mLastStatusBarVisibility |= flag;
@@ -11084,5 +11096,4 @@ public class WindowManagerService extends IWindowManager.Stub
     public int getSystemUIVisibility() {
         return mLastStatusBarVisibility;
     }
-
 }
