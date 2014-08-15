@@ -4276,6 +4276,13 @@ public final class Settings {
         public static final String RECENT_PANEL_SHOW_TOPMOST = "recent_panel_show_topmost";
 
         /**
+         * Recent panel background color
+         *
+         * @hide
+         */
+        public static final String RECENT_PANEL_BG_COLOR = "recent_panel_bg_color";
+
+        /**
          * Whether heads up notification is shown on the bottom of the screen (default = disabled)
          *
          * @hide
