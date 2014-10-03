@@ -87,19 +87,28 @@
         android:contentDescription="@string/accessibility_clear_all"
         />
 
+    <ImageView android:id="@+id/hover_button"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:scaleType="center"
+        android:src="@drawable/ic_notify_hover_normal"
+        android:background="@drawable/ic_notify_button_bg"
+        android:contentDescription="@string/accessibility_clear_all"
+        />
+
     <FrameLayout android:id="@+id/action_button_holder"
         android:layout_width="50dp"
         android:layout_height="50dp"
-        android:layout_marginStart="4dp"
+        android:layout_marginStart="0dp"
         >
 
-        <ImageView android:id="@+id/hover_button"
+        <ImageView android:id="@+id/halo_button"
             android:layout_width="50dp"
             android:layout_height="50dp"
             android:scaleType="center"
-            android:src="@drawable/ic_notify_hover_normal"
+            android:src="@drawable/ic_notify_halo"
             android:background="@drawable/ic_notify_button_bg"
-            android:contentDescription="@string/accessibility_clear_all"
+            android:contentDescription="@string/accessibility_halo"
             />
 
         <ImageView android:id="@+id/add_tile_button"
@@ -116,7 +125,7 @@
     <FrameLayout android:id="@+id/settings_button_holder"
         android:layout_width="50dp"
         android:layout_height="50dp"
-        android:layout_marginStart="4dp"
+        android:layout_marginStart="0dp"
         >
         <ImageView android:id="@+id/settings_button"
             android:layout_width="50dp"
