@@ -4635,13 +4635,6 @@ public final class Settings {
         public static final String HOVER_EXCLUDE_TOPMOST = "hover_exclude_topmost";
 
         /**
-         * Hover: Option to exclude from insecure lockscreen, default is 0 (off).
-         *
-         * @hide
-         */
-        public static final String HOVER_EXCLUDE_FROM_INSECURE_LOCK_SCREEN = "hover_exclude_from_insecure_lock_screen";
-
-        /**
          * Locale for secondary overlay on dialer for t9 search input
          * @hide
          */
