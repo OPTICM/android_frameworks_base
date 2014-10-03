@@ -4628,13 +4628,6 @@ public final class Settings {
         public static final String HOVER_REQUIRE_FULLSCREEN_MODE = "hover_require_fullscreen_mode";
 
         /**
-         * Hover: Option to exclude topmost app, default is 1 (on).
-         *
-         * @hide
-         */
-        public static final String HOVER_EXCLUDE_TOPMOST = "hover_exclude_topmost";
-
-        /**
          * Locale for secondary overlay on dialer for t9 search input
          * @hide
          */
