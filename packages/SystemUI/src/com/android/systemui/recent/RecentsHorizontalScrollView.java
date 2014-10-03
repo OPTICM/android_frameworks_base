@@ -226,7 +226,7 @@ public class RecentsHorizontalScrollView extends HorizontalScrollView
             super.onTouchEvent(ev);
     }
 
-    public boolean canChildBeDismissed(int gestureDirection, View v) {
+    public boolean canChildBeDismissed(View v) {
         return true;
     }
 
@@ -269,16 +269,6 @@ public class RecentsHorizontalScrollView extends HorizontalScrollView
 
     public View getChildContentView(View v) {
         return v.findViewById(R.id.recent_item);
-    }
-
-    @Override
-    public boolean isConstrainSwipeEnabled() {
-        return true;
-    }
-
-    @Override
-    public boolean isFadeoutEnabled(int gestureDirection) {
-        return true;
     }
 
     @Override

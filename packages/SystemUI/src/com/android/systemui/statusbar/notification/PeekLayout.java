@@ -82,17 +82,7 @@ public class PeekLayout extends LinearLayout implements SwipeHelper.Callback {
     }
 
     @Override
-    public boolean isConstrainSwipeEnabled() {
-        return true;
-    }
-
-    @Override
-    public boolean isFadeoutEnabled(int gestureDirection) {
-        return true;
-    }
-
-    @Override
-    public boolean canChildBeDismissed(int gestureDirection, View v) {
+    public boolean canChildBeDismissed(View v) {
         StatusBarNotification n = (StatusBarNotification)
                 mPeek.getNotificationView().getTag();
         return n.isClearable();

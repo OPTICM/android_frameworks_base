@@ -124,7 +124,7 @@ public class HeadsUpNotificationView extends FrameLayout implements SwipeHelper.
         mContentHolder.setAlpha(1f);
         mContentHolder.removeAllViews();
         mContentHolder.addView(mHeadsUp.row);
-        mSwipeHelper.snapChild(mContentSlider, 1f, false);
+        mSwipeHelper.snapChild(mContentSlider, 1f);
         mStartTouchTime = System.currentTimeMillis() + mTouchSensitivityDelay;
 
         // set content holder background based on whether notification
@@ -301,7 +301,7 @@ public class HeadsUpNotificationView extends FrameLayout implements SwipeHelper.
     // SwipeHelper.Callback methods
 
     @Override
-    public boolean canChildBeDismissed(int gestureDirection, View v) {
+    public boolean canChildBeDismissed(View v) {
         return true;
     }
 
@@ -330,15 +330,5 @@ public class HeadsUpNotificationView extends FrameLayout implements SwipeHelper.
     @Override
     public View getChildContentView(View v) {
         return mContentSlider;
-    }
-
-    @Override
-    public boolean isConstrainSwipeEnabled() {
-        return true;
-    }
-
-    @Override
-    public boolean isFadeoutEnabled(int gestureDirection) {
-        return true;
     }
 }

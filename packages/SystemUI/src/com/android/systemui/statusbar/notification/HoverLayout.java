@@ -197,17 +197,7 @@ public class HoverLayout extends RelativeLayout implements ExpandHelper.Callback
         }
 
         @Override
-        public boolean isConstrainSwipeEnabled() {
-            return !mHover.isClearable();
-        }
-
-        @Override
-        public boolean isFadeoutEnabled(int gestureDirection) {
-            return mHover.isClearable();
-        }
-
-        @Override
-        public boolean canChildBeDismissed(int gestureDirection, View v) {
+        public boolean canChildBeDismissed(View v) {
             return mHover.isClearable();
         }
 
