@@ -19,7 +19,6 @@ package com.android.systemui.statusbar;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.ActivityManagerNative;
-import android.app.INotificationManager;
 import android.app.Notification;
 import android.app.PendingIntent;
 import android.app.TaskStackBuilder;
@@ -163,7 +162,6 @@ public abstract class BaseStatusBar extends SystemUI implements
             .build();
 
     protected CommandQueue mCommandQueue;
-    protected INotificationManager mNotificationManager;
     protected IStatusBarService mBarService;
     protected H mHandler = createHandler();
 
@@ -288,10 +286,6 @@ public abstract class BaseStatusBar extends SystemUI implements
         return mNotificationData;
     }
 
-    public INotificationManager getNotificationManager() {
-        return mNotificationManager;
-    }
-
     public IStatusBarService getStatusBarService() {
         return mBarService;
     }
@@ -406,8 +400,6 @@ public abstract class BaseStatusBar extends SystemUI implements
         mDreamManager = IDreamManager.Stub.asInterface(
                 ServiceManager.checkService(DreamService.DREAM_SERVICE));
         mPowerManager = (PowerManager) mContext.getSystemService(Context.POWER_SERVICE);
-        mNotificationManager = INotificationManager.Stub.asInterface(
-                ServiceManager.getService(Context.NOTIFICATION_SERVICE));
 
         mProvisioningObserver.onChange(false); // set up
         mContext.getContentResolver().registerContentObserver(
@@ -797,22 +789,8 @@ public abstract class BaseStatusBar extends SystemUI implements
                             setIconHiddenByUser(packageNameF, item.isChecked());
                             updateNotificationIcons();
                         } else if (item.getItemId() == R.id.notification_floating_item) {
-                            boolean allowed = true;
-                            try {
-                                // preloaded apps are added to the blacklist array when is recreated, handled in the notification manager
-                                allowed = mNotificationManager.isPackageAllowedForFloatingMode(packageNameF);
-                            } catch (android.os.RemoteException ex) {
-                                // System is dead
-                            }
-                            if (allowed) {
-                                launchFloating(contentIntent);
-                                animateCollapsePanels(CommandQueue.FLAG_EXCLUDE_NONE);
-                            } else {
-                                String text = mContext.getResources().getString(R.string.floating_mode_blacklisted_app);
-                                int duration = Toast.LENGTH_LONG;
-                                animateCollapsePanels(CommandQueue.FLAG_EXCLUDE_NONE);
-                                Toast.makeText(mContext, text, duration).show();
-                            }
+                            launchFloating(contentIntent);
+                            animateCollapsePanels(CommandQueue.FLAG_EXCLUDE_NONE);
                         } else {
                             return false;
                         }
@@ -1375,39 +1353,42 @@ public abstract class BaseStatusBar extends SystemUI implements
             } catch (RemoteException e) {
             }
 
-            if (mIntent != null) {
-		/*
-                if (mFloat && !"android".equals(mPkg)) {
-                    Intent transparent = new Intent(mContext, com.android.systemui.Transparent.class);
-                    transparent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_FLOATING_WINDOW);
-                    mContext.startActivity(transparent);
-                }
-		*/
+            //int flags = Intent.FLAG_FLOATING_WINDOW | Intent.FLAG_ACTIVITY_CLEAR_TASK;
+            if (mPendingIntent != null) {
                 int[] pos = new int[2];
                 v.getLocationOnScreen(pos);
                 Intent overlay = new Intent();
-                if (mFloat && allowed) overlay.addFlags(flags);
+                if (mFloat) overlay.addFlags(Intent.FLAG_FLOATING_WINDOW | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                 overlay.setSourceBounds(
-                        new Rect(pos[0], pos[1], pos[0]+v.getWidth(), pos[1]+v.getHeight()));
+                        new Rect(pos[0], pos[1], pos[0] + v.getWidth(), pos[1] + v.getHeight()));
                 try {
-                    mIntent.send(mContext, 0, overlay);
+                    mPendingIntent.send(mContext, 0, overlay);
                 } catch (PendingIntent.CanceledException e) {
                     // the stack trace isn't very helpful here.  Just log the exception message.
                     Log.w(TAG, "Sending contentIntent failed: " + e);
                 }
 
-                KeyguardTouchDelegate.getInstance(mContext).dismiss();
+                } else if(mIntent != null) {
+                //mIntent.addFlags(flags);
+                mContext.startActivity(mIntent);
             }
 
-            try {
-                mBarService.onNotificationClick(mPkg, mTag, mId);
-            } catch (RemoteException ex) {
-                // system process is dead if we're here.
+            if(mKeyguard.isShowingAndNotHidden()) mKeyguard.dismiss();
+
+            if(mPkg != null) { // check if we're dealing with a notification
+                try {
+                    mBarService.onNotificationClick(mPkg, mTag, mId);
+                } catch (RemoteException ex) {
+                    // system process is dead if we're here.
+                }
             }
 
             // close the shade if it was open
             animateCollapsePanels(CommandQueue.FLAG_EXCLUDE_NONE);
             visibilityChanged(false);
+
+            // hide notification peek screen
+            mPeek.dismissNotification();
         }
     }
     /**
