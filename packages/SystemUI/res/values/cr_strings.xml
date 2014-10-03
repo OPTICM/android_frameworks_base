@@ -55,11 +55,6 @@
     <!-- Long-press back kill application -->
     <string name="app_killed_message">App killed</string>
 
-    <!-- Title shown in notification popup for launching notification in floating mode -->
-    <string name="status_bar_notification_floating_item_title">Floating mode</string>
-    <!-- Title shown in recents popup for showing app in floating mode -->
-    <string name="status_bar_recent_floating_item_title">Floating mode</string>
-
     <!-- Battery status in pie controls -->
     <string name="pie_battery_status_charging">Charging (<xliff:g id="percent">%d</xliff:g>%%)</string>
     <string name="pie_battery_status_full">Charged</string>
