@@ -42,8 +42,8 @@ public class HoverLayout extends RelativeLayout implements ExpandHelper.Callback
     private Context mContext;
     private Hover mHover;
 
-    private boolean mTouchOutside;
-    private boolean mExpanded;
+    private boolean mTouchOutside = false;
+    private boolean mExpanded = false;
 
     public HoverLayout(Context context) {
         super(context, null);
@@ -57,8 +57,6 @@ public class HoverLayout extends RelativeLayout implements ExpandHelper.Callback
     public HoverLayout(Context context, AttributeSet attrs) {
         super(context, attrs);
         mContext = context;
-        mTouchOutside = false;
-        mExpanded = false;
         int minHeight = mContext.getResources().getDimensionPixelSize(R.dimen.default_notification_min_height);
         int maxHeight = mContext.getResources().getDimensionPixelSize(R.dimen.default_notification_row_max_height);
         mExpandHelper = new ExpandHelper(mContext, this, minHeight, maxHeight);
@@ -90,33 +88,38 @@ public class HoverLayout extends RelativeLayout implements ExpandHelper.Callback
 
     @Override
     public boolean onInterceptTouchEvent(MotionEvent event) {
-        boolean intercept = super.onInterceptTouchEvent(event); // call super to consume touch
+        boolean intercept = super.onInterceptTouchEvent(event);
 
-        if (mHover.isAnimatingVisibility() || mHover.isHiding()) return intercept;
-
-        intercept |= (mExpandHelper.onInterceptTouchEvent(event) |
-                mSwipeHelper.onInterceptTouchEvent(event));
+        if (!mHover.isAnimatingVisibility() && !mHover.isHiding()) {
+            intercept |= (mExpandHelper.onInterceptTouchEvent(event) |
+                    mSwipeHelper.onInterceptTouchEvent(event));
+        }
 
         return intercept;
     }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        boolean touch = super.onTouchEvent(event); // call super to consume touch
+        boolean touch = super.onTouchEvent(event);
 
-        if (mHover.isAnimatingVisibility() || mHover.isHiding()) return touch;
-
-        int action = event.getAction(); // get touch input
-
+        int action = event.getAction();
         switch (action) {
             case MotionEvent.ACTION_DOWN:
             case MotionEvent.ACTION_OUTSIDE:
-                if (!mTouchOutside) {
+                if (!mTouchOutside && !mHover.isAnimatingVisibility()) {
                     mHover.clearHandlerCallbacks();
-                    if (mHover.microFadeOutDelay() == 200) {
-                        // Normal or instant micro fade out delay will be seted
-                        // depends on Hover.java class
-                        mHover.startMicroHideCountdown();
+                    if (mExpanded) {
+                        // Check if normal micro fade out delay is the one
+                        if (mHover.microFadeOutDelay() == 1250) {
+                            // 5 seconds if is expanded, user has time to pause gaming
+                            // See explanation in Hover.java startFiveSecHideCountdown()
+                            mHover.startFiveSecHideCountdown();
+                        // Check if instant micro fade out delay is the one
+                        } else if (mHover.microFadeOutDelay() == 200) {
+                            // Normal or instant micro fade out delay will be seted
+                            // depends on Hover.java class
+                            mHover.startMicroHideCountdown();
+                        }
                     } else {
                         // 1.25 if not expanded, user ignores it
                         mHover.startMicroHideCountdown();
@@ -127,8 +130,10 @@ public class HoverLayout extends RelativeLayout implements ExpandHelper.Callback
                 return touch;
         }
 
-        touch |= mExpandHelper.onTouchEvent(event) |
-                mSwipeHelper.onTouchEvent(event);
+        if (!mHover.isAnimatingVisibility() && !mHover.isHiding()) {
+            touch |= (mExpandHelper.onTouchEvent(event) |
+                    mSwipeHelper.onTouchEvent(event));
+        }
 
         return touch;
     }
@@ -172,11 +177,10 @@ public class HoverLayout extends RelativeLayout implements ExpandHelper.Callback
     @Override
     public void setUserLockedChild(View v, boolean userLocked) {
         if (userLocked) { // lock it and clear countdowns
-            mTouchOutside = false; // reset
             mHover.setLocked(userLocked);
             mHover.clearHandlerCallbacks();
         } else { // unlock and process next notification
-            mTouchOutside = false; // reset
+            mTouchOutside = false; // restart
             mHover.setLocked(userLocked);
             mHover.clearHandlerCallbacks();
             mHover.processOverridingQueue(mExpanded);
@@ -203,7 +207,6 @@ public class HoverLayout extends RelativeLayout implements ExpandHelper.Callback
 
         @Override
         public void onChildDismissed(View v, boolean direction) {
-            mTouchOutside = false; // reset
             mHover.clearHandlerCallbacks();
             mHover.setAnimatingVisibility(false);
             mHover.setLocked(false);
@@ -227,7 +230,6 @@ public class HoverLayout extends RelativeLayout implements ExpandHelper.Callback
 
         @Override
         public void onBeginDrag(View v) {
-            mTouchOutside = false; // reset
             requestDisallowInterceptTouchEvent(true);
             mHover.setLocked(true);
             mHover.clearHandlerCallbacks();
@@ -235,8 +237,8 @@ public class HoverLayout extends RelativeLayout implements ExpandHelper.Callback
 
         @Override
         public void onDragCancelled(View v) {
-            mTouchOutside = false; // reset
             mHover.setLocked(false);
+            mTouchOutside = false; // reset
             mHover.clearHandlerCallbacks();
             mHover.processOverridingQueue(mExpanded);
         }
