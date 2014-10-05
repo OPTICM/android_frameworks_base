@@ -3379,6 +3379,12 @@ public final class Settings {
         public static final String EXPANDED_FLASH_MODE = "expanded_flash_mode";
 
         /**
+        * Developer options - Navigation Bar show switch
+        * @hide
+        */
+        public static final String DEV_FORCE_SHOW_NAVBAR = "dev_force_show_navbar";
+
+        /**
         * AutoHide CombinedBar on tablets.
         * @hide
         */
@@ -4372,6 +4378,13 @@ public final class Settings {
          * @hide
          */
         public static final String RECENT_CARD_TEXT_COLOR = "recent_card_text_color";
+
+        /**
+         * Auto brightness slider located at top of the notification drawer
+         *
+         * @hide
+         */
+        public static final String NOTIFICATION_BRIGHTNESS_SLIDER = "notification_brightness_slider";
 
         /**
          * Settings to backup. This is here so that it's in the same place as the settings

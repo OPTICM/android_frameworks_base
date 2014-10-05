@@ -259,7 +259,7 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
     float mNotificationPanelMinHeightFrac;
     boolean mNotificationPanelIsFullScreenWidth;
     TextView mNotificationPanelDebugText;
-    
+
     // settings
     QuickSettingsController mQS;
     boolean mHasSettingsPanel, mHasFlipSettings;
@@ -1146,12 +1146,6 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
             }
         });
 
-        if (mRecreating) {
-            removeSidebarView();
-        } else {
-        }
-        addSidebarView();
-
         // Setup pie container if enabled
         attachPieContainer(isPieEnabled());
 
@@ -1465,6 +1459,7 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
 
         // receive broadcasts
         IntentFilter filter = new IntentFilter();
+        filter.addAction(Intent.ACTION_CONFIGURATION_CHANGED);
         filter.addAction(Intent.ACTION_CLOSE_SYSTEM_DIALOGS);
         filter.addAction(Intent.ACTION_SCREEN_OFF);
         filter.addAction(Intent.ACTION_SCREEN_ON);
@@ -1993,7 +1988,7 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
     }
 
     @Override
-    protected void updateNotificationIcons() {
+    public void updateNotificationIcons() {
         if (mNotificationIcons == null) return;
 
         loadNotificationShade();
@@ -3403,33 +3398,9 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
         }
     }
 
-    @Override
-    public void animateStatusBarOut() {
-        // ensure to not overload
-        if (mStatusBarView.getVisibility() == View.VISIBLE) {
-            mHandler.post(new Runnable() {
-                public void run() {
-                    mStatusBarView.setVisibility(View.GONE);
-                    mStatusBarView.startAnimation(loadAnim(com.android.internal.R.anim.push_up_out, null));
-                }
-            });
-        }
-    }
-
-    @Override
-    public void animateStatusBarIn() {
-        // ensure to not overload
-        if (mStatusBarView.getVisibility() == View.GONE) {
-            mHandler.post(new Runnable() {
-                public void run() {
-                    mStatusBarView.setVisibility(View.VISIBLE);
-                    mStatusBarView.startAnimation(loadAnim(com.android.internal.R.anim.push_down_in, null));
-                }
-            });
-        }
-    }
-
     private class MyTicker extends Ticker {
+        private boolean hasTicked = false;
+
         MyTicker(Context context, View sb) {
             super(context, sb);
         }
@@ -3443,10 +3414,12 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
             mStatusBarContents.startAnimation(loadAnim(com.android.internal.R.anim.push_up_out, null));
             mCenterClockLayout.startAnimation(
             loadAnim(com.android.internal.R.anim.push_up_out, null));
+            hasTicked = true;
         }
 
         @Override
         public void tickerDone() {
+            if (!hasTicked) return;
             mStatusBarContents.setVisibility(View.VISIBLE);
             mCenterClockLayout.setVisibility(View.VISIBLE);
             mTickerView.setVisibility(View.GONE);
@@ -3454,6 +3427,7 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
             mTickerView.startAnimation(loadAnim(com.android.internal.R.anim.push_down_out,
                         mTickingDoneListener));
             mCenterClockLayout.startAnimation(loadAnim(com.android.internal.R.anim.push_down_in, null));
+            hasTicked = false;
 	    }
 
         public void tickerHalting() {
@@ -4149,8 +4123,6 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
 
         checkBarModes();
         mRecreating = false;
-
-        updateHalo();
     }
 
     private void removeAllViews(ViewGroup parent) {
@@ -4279,8 +4251,7 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
             mNotificationPanelMinHeightFrac = 0f;
         }
 
-        mHeadsUpNotificationDecay = res.getInteger(R.integer.heads_up_notification_decay);
-        mRowHeight =  res.getDimensionPixelSize(R.dimen.notification_row_min_height);
+        mRowHeight = res.getDimensionPixelSize(R.dimen.default_notification_row_min_height);
 
         if (false) Log.v(TAG, "updateResources");
     }

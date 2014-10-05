@@ -352,33 +352,6 @@ public class RecentPanelView {
             public boolean onMenuItemClick(MenuItem item) {
                 if (item.getItemId() == MENU_APP_DETAILS_ID) {
                     startApplicationDetailsActivity(td.packageName, null, null);
-                } else if (item.getItemId() == MENU_APP_FLOATING_ID) {
-                    String currentViewPackage = td.packageName;
-                    boolean allowed = true; // default on
-                    try {
-                        // preloaded apps are added to the blacklist array when is recreated, handled in the notification manager
-                        allowed = mNotificationManager.isPackageAllowedForFloatingMode(currentViewPackage);
-                    } catch (android.os.RemoteException ex) {
-                        // System is dead
-                    }
-                    if (!allowed) {
-                        exit();
-                        String text = mContext.getResources().getString(R.string.floating_mode_blacklisted_app);
-                        int duration = Toast.LENGTH_LONG;
-                        Toast.makeText(mContext, text, duration).show();
-                        return true;
-                    } else {
-                        exit();
-                    }
-                    selectedView.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            Intent intent = td.intent;
-                            intent.setFlags(Intent.FLAG_FLOATING_WINDOW
-                                    | Intent.FLAG_ACTIVITY_NEW_TASK);
-                            mContext.startActivity(intent);
-                        }
-                    });
                 } else if (item.getItemId() == MENU_APP_STOP_ID) {
                     ActivityManager am = (ActivityManager)mContext.getSystemService(
                             Context.ACTIVITY_SERVICE);

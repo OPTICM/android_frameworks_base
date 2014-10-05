@@ -103,7 +103,6 @@ import com.android.systemui.statusbar.policy.NotificationRowLayout;
 import com.android.systemui.statusbar.policy.PieController;
 
 import com.android.internal.util.cm.ActionUtils;
-//import com.android.internal.util.crdroid.TaskUtils;
 
 import java.util.ArrayList;
 import java.util.Locale;
@@ -466,13 +465,8 @@ public abstract class BaseStatusBar extends SystemUI implements
         mContext.registerReceiver(mBroadcastReceiver, filter);
     }
 
-    public Peek getPeekInstance() {
-        if(mPeek == null) mPeek = new Peek(this, mContext);
-        return mPeek;
-    }
-
     public PowerManager getPowerManagerInstance() {
-        if(mPowerManager == null) mPowerManager
+        if (mPowerManager == null) mPowerManager
                 = (PowerManager) mContext.getSystemService(Context.POWER_SERVICE);
         return mPowerManager;
     }
@@ -596,7 +590,11 @@ public abstract class BaseStatusBar extends SystemUI implements
         return new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
-                final String packageNameF = (String) v.getTag();
+                final NotificationData.Entry entry = (Entry) v.getTag();
+                final StatusBarNotification sbNotification = entry.notification;
+                final String packageNameF = sbNotification.getPackageName();
+                final PendingIntent contentIntent = sbNotification.getNotification().contentIntent;
+
                 if (packageNameF == null) return false;
                 if (v.getWindowToken() == null) return false;
                 mNotificationBlamePopup = new PopupMenu(mContext, v);
@@ -1097,7 +1095,6 @@ public abstract class BaseStatusBar extends SystemUI implements
                 contentView.setTextColor(com.android.internal.R.id.text, mHeadsUpTextColor);
                 contentView.setTextColor(com.android.internal.R.id.big_text, mHeadsUpTextColor);
                 contentView.setTextColor(com.android.internal.R.id.time, mHeadsUpTextColor);
-//                contentView.setTextColor(com.android.internal.R.id.action0, mHeadsUpTextColor);
                 contentView.setTextColor(com.android.internal.R.id.text2, mHeadsUpTextColor);
                 contentView.setTextColor(com.android.internal.R.id.info, mHeadsUpTextColor);
             }
@@ -1106,7 +1103,6 @@ public abstract class BaseStatusBar extends SystemUI implements
                 bigContentView.setTextColor(com.android.internal.R.id.text, mHeadsUpTextColor);
                 bigContentView.setTextColor(com.android.internal.R.id.big_text, mHeadsUpTextColor);
                 bigContentView.setTextColor(com.android.internal.R.id.time, mHeadsUpTextColor);
-//                bigContentView.setTextColor(com.android.internal.R.id.action0, mHeadsUpTextColor);
                 bigContentView.setTextColor(com.android.internal.R.id.text2, mHeadsUpTextColor);
                 bigContentView.setTextColor(com.android.internal.R.id.info, mHeadsUpTextColor);
             }
@@ -1119,7 +1115,7 @@ public abstract class BaseStatusBar extends SystemUI implements
                 R.layout.status_bar_notification_row, parent, false);
 
         // for blaming (see SwipeHelper.setLongPressListener)
-        row.setTag(sbn.getPackageName());
+        row.setTag(entry);
 
         workAroundBadLayerDrawableOpacity(row);
         View vetoButton = updateNotificationVetoButton(row, sbn);
@@ -1231,27 +1227,21 @@ public abstract class BaseStatusBar extends SystemUI implements
                 v.getLocationOnScreen(pos);
                 Intent overlay = new Intent();
                 overlay.setSourceBounds(
-                        new Rect(pos[0], pos[1], pos[0] + v.getWidth(), pos[1] + v.getHeight()));
+                        new Rect(pos[0], pos[1], pos[0]+v.getWidth(), pos[1]+v.getHeight()));
                 try {
-                    mPendingIntent.send(mContext, 0, overlay);
+                    mIntent.send(mContext, 0, overlay);
                 } catch (PendingIntent.CanceledException e) {
                     // the stack trace isn't very helpful here.  Just log the exception message.
                     Log.w(TAG, "Sending contentIntent failed: " + e);
                 }
 
-                } else if(mIntent != null) {
-                //mIntent.addFlags(flags);
-                mContext.startActivity(mIntent);
+                KeyguardTouchDelegate.getInstance(mContext).dismiss();
             }
 
-            if(mKeyguard.isShowingAndNotHidden()) mKeyguard.dismiss();
-
-            if(mPkg != null) { // check if we're dealing with a notification
-                try {
-                    mBarService.onNotificationClick(mPkg, mTag, mId);
-                } catch (RemoteException ex) {
-                    // system process is dead if we're here.
-                }
+            try {
+                mBarService.onNotificationClick(mPkg, mTag, mId);
+            } catch (RemoteException ex) {
+                // system process is dead if we're here.
             }
 
             // close the shade if it was open
@@ -1355,7 +1345,7 @@ public abstract class BaseStatusBar extends SystemUI implements
         }
         // Construct the expanded view.
         NotificationData.Entry entry = new NotificationData.Entry(key, notification, iconView);
-        if (!inflateViews(entry, mPile)) {
+        if (!inflateViews(entry, mPile, 0)) {
             handleNotificationError(key, notification, "Couldn't expand RemoteViews for: "
                     + notification);
             return null;
@@ -1368,9 +1358,11 @@ public abstract class BaseStatusBar extends SystemUI implements
             return;
         }
         // Add the expanded view and icon.
-        int pos = mNotificationData.add(entry);
-        if (DEBUG) {
-            Log.d(TAG, "addNotificationViews: added at " + pos);
+        if (mNotificationData.findByKey(entry.key) == null) {
+            int pos = mNotificationData.add(entry);
+            if (DEBUG) {
+                Log.d(TAG, "addNotificationViews: added at " + pos);
+            }
         }
         updateExpansionStates();
         updateNotificationIcons();
@@ -1553,6 +1545,11 @@ public abstract class BaseStatusBar extends SystemUI implements
 
     private void updateNotificationViews(NotificationData.Entry entry,
             StatusBarNotification notification) {
+        updateNotificationViews(entry, notification, false);
+    }
+
+    private void updateNotificationViews(NotificationData.Entry entry,
+            StatusBarNotification notification, boolean headsUp) {
         final RemoteViews contentView = notification.getNotification().contentView;
         final RemoteViews bigContentView = notification.getNotification().bigContentView;
         // Reapply the RemoteViews
