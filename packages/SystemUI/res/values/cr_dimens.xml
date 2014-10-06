@@ -49,4 +49,7 @@
     <dimen name="pie_sysinfo_second_layer_radius">255dp</dimen>
     <dimen name="pie_sysinfo_height">85sp</dimen>
 
+    <!-- Heads up -->
+    <dimen name="heads_up_bottom_gap">5dp</dimen>
+
 </resources>
