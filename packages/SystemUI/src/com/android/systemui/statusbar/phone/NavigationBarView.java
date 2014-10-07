@@ -89,7 +89,6 @@ public class NavigationBarView extends LinearLayout implements BaseStatusBar.Nav
     private OnClickListener mRecentsClickListener;
     private OnLongClickListener mRecentsLongClickListener;
     private OnTouchListener mRecentsPreloadListener;
-    private OnLongClickListener mRecentsLongClickListener;
     private OnTouchListener mHomeSearchActionListener;
 
     final Display mDisplay;
@@ -125,6 +124,12 @@ public class NavigationBarView extends LinearLayout implements BaseStatusBar.Nav
     private SettingsObserver mObserver;
 
     private FrameLayout mFlayout;
+
+    // Visibility of R.id.one view prior to swapping it for a left arrow key
+    public int mSlotOneVisibility = -1;
+
+    // Visibility of R.id.six view prior to swapping it for a right arrow key
+    public int mSlotSixVisibility = -1;
 
     // workaround for LayoutTransitions leaving the nav buttons in a weird state (bug 5549288)
     final static boolean WORKAROUND_INVALID_LAYOUT = true;
@@ -346,7 +351,6 @@ public class NavigationBarView extends LinearLayout implements BaseStatusBar.Nav
         mRecentsClickListener = recentsClickListener;
         mRecentsLongClickListener = recentsLongClickListener;
         mRecentsPreloadListener = recentsPreloadListener;
-        mRecentsLongClickListener = recentsLongClickListener;
         mHomeSearchActionListener = homeSearchActionListener;
         updateButtonListeners();
     }
@@ -370,7 +374,6 @@ public class NavigationBarView extends LinearLayout implements BaseStatusBar.Nav
             recentView.setOnClickListener(mRecentsClickListener);
             recentView.setOnLongClickListener(mRecentsLongClickListener);
             recentView.setOnTouchListener(mRecentsPreloadListener);
-            recentView.setOnLongClickListener(mRecentsLongClickListener);
         }
         View homeView = findButton(NavbarEditor.NAVBAR_HOME);
         if (homeView != null) {
@@ -647,7 +650,7 @@ public class NavigationBarView extends LinearLayout implements BaseStatusBar.Nav
                 && mLockUtils.getCameraEnabled();
         final boolean showNotifs = showSearch &&
             Settings.System.getInt(mContext.getContentResolver(),
-                        Settings.System.LOCKSCREEN_NOTIFICATIONS, 0) == 1 &&
+                        Settings.System.LOCKSCREEN_NOTIFICATIONS, 1) == 1 &&
             Settings.System.getInt(mContext.getContentResolver(),
                         Settings.System.LOCKSCREEN_NOTIFICATIONS_PRIVACY_MODE, 0) == 0;
         setVisibleOrGone(getSearchLight(), showSearch && mModLockDisabled

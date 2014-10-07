@@ -2923,6 +2923,13 @@ public final class Settings {
         public static final String QUICK_SETTINGS_SMALL_ICONS = "qs_small_icons";
 
         /**
+         * Let Quick Settings Panel Tiles vibrate on click
+         *
+         * @hide
+         */
+        public static final String QUICK_SETTINGS_TILES_VIBRATE = "quick_settings_tiles_vibrate";
+
+        /**
          * Enable looking up of phone numbers of nearby places
          *
          * @hide
@@ -3123,27 +3130,6 @@ public final class Settings {
          */
         public static final String PIE_BUTTONS_CONFIG_SECOND_LAYER =
                 "pie_buttons_config_second_layer";
-
-        /**
-         * Heads Up Notifications
-         *
-         * @hide
-         */
-        public static final String HEADS_UP_NOTIFICATION = "heads_up_enabled";
-
-        /**
-         * Which applications to disable heads up notifications in
-         *
-         * @hide
-         */
-        public static final String HEADS_UP_CUSTOM_VALUES = "heads_up_custom_values";
-
-        /**
-         * Which applications to disable heads up notifications for
-         *
-         * @hide
-         */
-        public static final String HEADS_UP_BLACKLIST_VALUES = "heads_up_blacklist_values";
 
         /**
          * Quick Settings Panel Dynamic Tiles
@@ -3431,11 +3417,10 @@ public final class Settings {
                 "status_bar_battery_show_percent";
 
         /**
-         * Whether to hide the clock, show it in the default
-         * position or show it in the center
+         * Whether to show the clock in status bar
+         * of the stock battery icon
          * 0: don't show the clock
-         * 1: show the clock in the default position
-         * 2: show the clock in the center
+         * 1: show the clock
          * default: 1
          * @hide
          */
@@ -3577,12 +3562,6 @@ public final class Settings {
         public static final int STATUS_BAR_COLLAPSE_IF_EMPTIED = 1;
         /** @hide */
         public static final int STATUS_BAR_COLLAPSE_IF_NO_CLEARABLE = 2;
-
-        /**
-         * Whether to scramble a pin unlock layout
-         * @hide
-         */
-        public static final String LOCKSCREEN_PIN_SCRAMBLE_LAYOUT = "lockscreen_scramble_pin_layout";
 
         /**
          * Whether to use the custom quick unlock screen control
@@ -4215,6 +4194,7 @@ public final class Settings {
          */
         public static final String NOTIFICATION_BRIGHTNESS_SLIDER = "notification_brightness_slider";
 
+        /**
          * Whether to unlock the screen with the home key.  The value is boolean (1 or 0).
          * @hide
          */
@@ -4365,6 +4345,24 @@ public final class Settings {
          * @hide
          */
         public static final String HEADS_UP_EXCLUDE_FROM_LOCK_SCREEN = "heads_up_exclude_from_lock_screen";
+
+        /**
+         * Locale for secondary overlay on dialer for t9 search input
+         * @hide
+         */
+        public static final String T9_SEARCH_INPUT_LOCALE = "t9_search_input_locale";
+
+        /**
+         * The style of the incoming call screen.
+         * Default is {@link INCOMING_CALL_STYLE_FULLSCREEN_PHOTO}.
+         * @hide
+         */
+        public static final String INCOMING_CALL_STYLE = "incoming_call_style";
+
+        /** @hide */
+        public static final int INCOMING_CALL_STYLE_CLASSIC = 0;
+        /** @hide */
+        public static final int INCOMING_CALL_STYLE_FULLSCREEN_PHOTO = 1;
 
         /**
          * Recent card background color

@@ -624,14 +624,10 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         }
         @Override
         public void onReceive(Context context, Intent intent) {
-           final String action = intent.getAction();
-            if (action.equals(Intent.ACTION_POWERMENU)) {
-                showGlobalActionsDialog();
-            }
+            final String action = intent.getAction();
             if (action.equals(Intent.ACTION_POWERMENU_REBOOT)) {
                 mWindowManagerFuncs.rebootTile(); 
             }
-
         }
 
         private void registerSelf() {
@@ -639,7 +635,6 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 mIsRegistered = true;
 
                 IntentFilter filter = new IntentFilter();
-                filter.addAction(Intent.ACTION_POWERMENU);
                 filter.addAction(Intent.ACTION_POWERMENU_REBOOT);
                 mContext.registerReceiver(mPowerMenuReceiver, filter);
             }
@@ -651,7 +646,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 mContext.unregisterReceiver(this);
             }
         }
-    } 
+    }
 
     class SettingsObserver extends ContentObserver {
         SettingsObserver(Handler handler) {
@@ -1064,6 +1059,14 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         mHandler.removeCallbacks(mScreenRecordRunnable);
     }
 
+    private final Runnable mGlobalMenu = new Runnable() {
+        @Override
+        public void run() {
+            sendCloseSystemWindows(SYSTEM_DIALOG_REASON_GLOBAL_ACTIONS);
+            showGlobalActionsDialog(false);
+        }
+    };
+
     private final Runnable mPowerLongPress = new Runnable() {
         @Override
         public void run() {
@@ -1465,7 +1468,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             screenTurnedOff(WindowManagerPolicy.OFF_BECAUSE_OF_USER);
         }
 
-	mPowerMenuReceiver = new PowerMenuReceiver(context);
+        mPowerMenuReceiver = new PowerMenuReceiver(context);
         mPowerMenuReceiver.registerSelf();
 
         String deviceKeyHandlerLib = mContext.getResources().getString(
@@ -1501,15 +1504,10 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     }
 
     private void updateKeyAssignments() {
-        int activeHardwareKeys = mDeviceHardwareKeys;
-
-        if (mDevForceNavbar) {
-            activeHardwareKeys = 0;
-        }
-        final boolean hasMenu = (activeHardwareKeys & KEY_MASK_MENU) != 0;
-        final boolean hasHome = (activeHardwareKeys & KEY_MASK_HOME) != 0;
-        final boolean hasAssist = (activeHardwareKeys & KEY_MASK_ASSIST) != 0;
-        final boolean hasAppSwitch = (activeHardwareKeys & KEY_MASK_APP_SWITCH) != 0;
+        final boolean hasMenu = (mDeviceHardwareKeys & KEY_MASK_MENU) != 0;
+        final boolean hasHome = (mDeviceHardwareKeys & KEY_MASK_HOME) != 0;
+        final boolean hasAssist = (mDeviceHardwareKeys & KEY_MASK_ASSIST) != 0;
+        final boolean hasAppSwitch = (mDeviceHardwareKeys & KEY_MASK_APP_SWITCH) != 0;
         final ContentResolver resolver = mContext.getContentResolver();
 
         // Initialize all assignments to sane defaults.
@@ -4880,6 +4878,23 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         final boolean canceled = event.isCanceled();
         int keyCode = event.getKeyCode();
         int scanCode = event.getScanCode();
+        AudioManager audioManager = (AudioManager) mContext.getSystemService(
+                Context.AUDIO_SERVICE);
+
+        if (SystemProperties.getInt("sys.quickboot.enable", 0) == 1) {
+
+            if (keyCode == KeyEvent.KEYCODE_POWER && !isScreenOn) {
+                if(down){
+                    acquireQuickBootWakeLock();
+                    mHandler.postDelayed(mQuickBootPowerLongPress, mLongPressPoweronTime);
+                } else {
+                    releaseQuickBootWakeLock();
+                    mHandler.removeCallbacks(mQuickBootPowerLongPress);
+                }
+            }
+            // ignore this event
+            return 0;
+        }
 
         final boolean isInjected = (policyFlags & WindowManagerPolicy.FLAG_INJECTED) != 0;
 
@@ -4898,6 +4913,14 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         final boolean isWakeKey = (policyFlags
                 & (WindowManagerPolicy.FLAG_WAKE | WindowManagerPolicy.FLAG_WAKE_DROPPED)) != 0;
 
+        //Ignore Home key if it is disabled in Settings
+        if (scanCode != 0 && keyCode == KeyEvent.KEYCODE_HOME) {
+            if (Settings.System.getInt(mContext.getContentResolver(), Settings.System.KEY_HOME_ENABLED, 1) == 0) {
+                Log.i(TAG, "Ignoring Home Key: Disabled via Settings");
+                return 0;
+            }
+        }
+
         //Ignore Menu key if it is disabled in Settings
         if (scanCode != 0 && keyCode == KeyEvent.KEYCODE_MENU) {
             if (Settings.System.getInt(mContext.getContentResolver(), Settings.System.KEY_MENU_ENABLED, 1) == 0) {
@@ -4909,7 +4932,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         //Ignore Back key if it is disabled in Settings
         if (scanCode != 0 && keyCode == KeyEvent.KEYCODE_BACK) {
             if (Settings.System.getInt(mContext.getContentResolver(), Settings.System.KEY_BACK_ENABLED, 1) == 0) {
-                Log.i(TAG, "Ignoring Menu Key: Disabled via Settings");
+                Log.i(TAG, "Ignoring Back Key: Disabled via Settings");
                 return 0;
             }
         }

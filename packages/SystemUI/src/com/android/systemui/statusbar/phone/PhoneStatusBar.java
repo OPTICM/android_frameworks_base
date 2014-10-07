@@ -75,7 +75,6 @@ import android.os.UserHandle;
 import android.provider.Settings;
 import android.service.notification.StatusBarNotification;
 import android.telephony.MSimTelephonyManager;
-import android.telephony.TelephonyManager;
 import android.util.DisplayMetrics;
 import android.util.EventLog;
 import android.util.Log;
@@ -84,6 +83,7 @@ import android.view.Display;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.HapticFeedbackConstants;
+import android.view.IWindowManager;
 import android.view.MotionEvent;
 import android.view.VelocityTracker;
 import android.view.View;
@@ -104,9 +104,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.ViewFlipper;
 
-
 import com.android.internal.statusbar.StatusBarIcon;
-import com.android.internal.util.cm.ActionUtils;
 import com.android.systemui.BatteryMeterView.BatteryMeterMode;
 import com.android.systemui.DemoMode;
 import com.android.systemui.DockBatteryMeterView;
@@ -127,7 +125,6 @@ import com.android.systemui.statusbar.SignalClusterView;
 import com.android.systemui.statusbar.StatusBarIconView;
 import com.android.systemui.statusbar.policy.BatteryController;
 import com.android.systemui.statusbar.policy.BluetoothController;
-import com.android.systemui.statusbar.policy.Clock;
 import com.android.systemui.statusbar.policy.DateView;
 import com.android.systemui.statusbar.policy.DockBatteryController;
 import com.android.systemui.statusbar.policy.HeadsUpNotificationView;
@@ -142,7 +139,6 @@ import java.io.FileDescriptor;
 import java.io.PrintWriter;
 import java.lang.StringBuilder;
 import java.util.ArrayList;
-import java.util.List;
 
 public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
         NetworkController.UpdateUIListener, BrightnessController.BrightnessStateChangeCallback {
@@ -195,9 +191,6 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
     private static final int BRIGHTNESS_CONTROL_LONG_PRESS_TIMEOUT = 750; // ms
     private static final int BRIGHTNESS_CONTROL_LINGER_THRESHOLD = 20;
 
-    private static final int CLOCK_STYLE_HIDDEN = 0;
-    private static final int CLOCK_STYLE_DEFAULT = 1;
-    private static final int CLOCK_STYLE_CENTERED = 2;
 
     // fling gesture tuning parameters, scaled to display density
     private float mSelfExpandVelocityPx; // classic value: 2000px/s
@@ -316,8 +309,7 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
 
     // clock
     private boolean mShowClock = true;
-    private int mClockStyle;
-    private Clock mClockView;
+    private boolean mClockEnabled;
 
     // position
     int[] mPositionTmp = new int[2];
@@ -522,12 +514,8 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
         }
 
         @Override
-        public void onChange(boolean selfChange, Uri uri) {
-            if (uri.equals(Settings.System.getUriFor(Settings.System.STATUS_BAR_CLOCK))) {
-                updateClockLocation();
-            } else {
-                updateSettings();
-            }
+        public void onChange(boolean selfChange) {
+            updateSettings();
         }
 
         // Used for notification drawer background
@@ -1158,15 +1146,6 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
             }
         });
 
-        if (mRecreating) {
-            removeSidebarView();
-        } else {
-            /* ChaosLab: GestureAnywhere - BEGIN */
-            addGestureAnywhereView();
-            /* ChaosLab: GestureAnywhere - END */
-        }
-        addSidebarView();
-
         // Setup pie container if enabled
         attachPieContainer(isPieEnabled());
 
@@ -1480,6 +1459,7 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
 
         // receive broadcasts
         IntentFilter filter = new IntentFilter();
+        filter.addAction(Intent.ACTION_CONFIGURATION_CHANGED);
         filter.addAction(Intent.ACTION_CLOSE_SYSTEM_DIALOGS);
         filter.addAction(Intent.ACTION_SCREEN_OFF);
         filter.addAction(Intent.ACTION_SCREEN_ON);
@@ -1603,17 +1583,10 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
 
     private View.OnLongClickListener mRecentsLongClickListener = new View.OnLongClickListener() {
         public boolean onLongClick(View v) {
+            cancelPreloadingRecentTasksList();
             awakenDreams();
             recentsLongPress();
             return true;
-        }
-    };
-
-    private View.OnLongClickListener mRecentsLongPressListener = new View.OnLongClickListener() {
-        @Override
-        public boolean onLongClick(View v) {
-            cancelPreloadingRecentTasksList();
-            return ActionUtils.switchToLastApp(mContext, mCurrentUserId);
         }
     };
 
@@ -2216,27 +2189,6 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
         if (clockLocation == 1 && cclock != null) {
             cclock.setVisibility(mClockEnabled && mShowClock ? View.VISIBLE : View.GONE);
         }
-    }
-
-    private void updateClockLocation() {
-        mClockStyle = Settings.System.getIntForUser(mContext.getContentResolver(),
-                Settings.System.STATUS_BAR_CLOCK, CLOCK_STYLE_DEFAULT, mCurrentUserId);
-
-        mNotificationIcons.setCenteredClock(mClockStyle == CLOCK_STYLE_CENTERED);
-        updateNotificationIcons();
-
-        switch (mClockStyle) {
-            case CLOCK_STYLE_DEFAULT:
-                mClockView = (Clock) mStatusBarView.findViewById(R.id.clock);
-                mStatusBarView.findViewById(R.id.center_clock).setVisibility(View.GONE);
-                break;
-            case CLOCK_STYLE_CENTERED:
-                mClockView = (Clock) mStatusBarView.findViewById(R.id.center_clock);
-                mStatusBarView.findViewById(R.id.clock).setVisibility(View.GONE);
-                break;
-        }
-
-        updateClockVisibility();
     }
 
     /**
@@ -3447,6 +3399,8 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
     }
 
     private class MyTicker extends Ticker {
+        private boolean hasTicked = false;
+
         MyTicker(Context context, View sb) {
             super(context, sb);
         }
@@ -3460,14 +3414,12 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
             mStatusBarContents.startAnimation(loadAnim(com.android.internal.R.anim.push_up_out, null));
             mCenterClockLayout.startAnimation(
             loadAnim(com.android.internal.R.anim.push_up_out, null));
-
-            mTickerView.setVisibility(View.VISIBLE);
-            mTickerView.startAnimation(loadAnim(com.android.internal.R.anim.push_up_in, null));
-            mStatusBarContents.startAnimation(loadAnim(com.android.internal.R.anim.push_up_out, null));
+            hasTicked = true;
         }
 
         @Override
         public void tickerDone() {
+            if (!hasTicked) return;
             mStatusBarContents.setVisibility(View.VISIBLE);
             mCenterClockLayout.setVisibility(View.VISIBLE);
             mTickerView.setVisibility(View.GONE);
@@ -3475,7 +3427,8 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
             mTickerView.startAnimation(loadAnim(com.android.internal.R.anim.push_down_out,
                         mTickingDoneListener));
             mCenterClockLayout.startAnimation(loadAnim(com.android.internal.R.anim.push_down_in, null));
-	    }
+            hasTicked = false;
+        }
 
         public void tickerHalting() {
             if (mStatusBarContents.getVisibility() != View.VISIBLE) {
@@ -3484,11 +3437,6 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
                 mStatusBarContents
                         .startAnimation(loadAnim(com.android.internal.R.anim.fade_in, null));
                 mCenterClockLayout.startAnimation(loadAnim(com.android.internal.R.anim.fade_in, null));
-            }
-            if (mClockStyle == CLOCK_STYLE_CENTERED && mShowClock) {
-                mClockView.setVisibility(View.VISIBLE);
-                mClockView.startAnimation(
-                        loadAnim(com.android.internal.R.anim.fade_in, null));
             }
             mTickerView.setVisibility(View.GONE);
             // we do not animate the ticker away at this point, just get rid of it (b/6992707)
@@ -4002,6 +3950,10 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
             mNavigationBarView.setLeftInLandscape(navLeftInLandscape);
         }
 
+        mClockEnabled = Settings.System.getIntForUser(resolver,
+                Settings.System.STATUS_BAR_CLOCK, 1, mCurrentUserId) != 0;
+        updateClockVisibility();
+
         int signalStyle = Settings.System.getIntForUser(resolver,
                 Settings.System.STATUS_BAR_SIGNAL_TEXT,
                 SignalClusterView.STYLE_NORMAL, mCurrentUserId);
@@ -4037,7 +3989,12 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
             toggleQSShade();
             break;
         case 6:
-            togglePowerMenu();
+            try {
+                IWindowManager windowManagerService = IWindowManager.Stub.asInterface(
+                    ServiceManager.getService(Context.WINDOW_SERVICE));
+                windowManagerService.toggleGlobalMenu();
+            } catch (RemoteException e) {
+            }
             break;
         }
     }
@@ -4144,9 +4101,6 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
             addIcon(slot, i, i, icon);
         }
 
-        // update the clock location
-        updateClockLocation();
-
         // recreate notifications.
         for (int i = 0; i < nNotifs; i++) {
             Pair<IBinder, StatusBarNotification> notifData = notifications.get(i);
@@ -4167,6 +4121,7 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
 
         restorePieTriggerMask();
 
+        checkBarModes();
         mRecreating = false;
     }
 
@@ -4419,7 +4374,7 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
         }
         boolean modeChange = command.equals(COMMAND_ENTER) || command.equals(COMMAND_EXIT);
         if (modeChange || command.equals(COMMAND_CLOCK)) {
-            mClockView.dispatchDemoCommand(command, args);
+            dispatchDemoCommandToView(command, args, R.id.clock);
         }
         if (modeChange || command.equals(COMMAND_BATTERY)) {
             dispatchDemoCommandToView(command, args, R.id.battery);

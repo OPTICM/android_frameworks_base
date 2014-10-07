@@ -62,8 +62,7 @@ public class CommandQueue extends IStatusBar.Stub {
     private static final int MSG_TOGGLE_SCREENSHOT          = 20 << MSG_SHIFT;
     private static final int MSG_TOGGLE_LAST_APP            = 21 << MSG_SHIFT;
     private static final int MSG_TOGGLE_KILL_APP            = 22 << MSG_SHIFT;
-    private static final int MSG_TOGGLE_POWER_MENU          = 23 << MSG_SHIFT;
-    private static final int MSG_SET_PIE_TRIGGER_MASK       = 24 << MSG_SHIFT;
+    private static final int MSG_SET_PIE_TRIGGER_MASK       = 23 << MSG_SHIFT;
     private static final int MSG_HIDE_HEADS_UP              = 25 << MSG_SHIFT;
     private static final int MSG_HIDE_HEADS_UP_CANDIDATE    = 26 << MSG_SHIFT;
     private static final int MSG_UPDATE_HEADS_UP_POSITION   = 27 << MSG_SHIFT;
@@ -119,7 +118,6 @@ public class CommandQueue extends IStatusBar.Stub {
         public void toggleScreenshot();
         public void toggleLastApp();
         public void toggleKillApp();
-        public void togglePowerMenu();
         public void setButtonDrawable(int buttonId, int iconId);
     }
 
@@ -330,13 +328,6 @@ public class CommandQueue extends IStatusBar.Stub {
         synchronized (mList) {
             mHandler.removeMessages(MSG_TOGGLE_KILL_APP);
             mHandler.sendEmptyMessage(MSG_TOGGLE_KILL_APP);
-        }
-    }
-
-    public void togglePowerMenu() {
-        synchronized (mList) {
-            mHandler.removeMessages(MSG_TOGGLE_POWER_MENU);
-            mHandler.obtainMessage(MSG_TOGGLE_POWER_MENU, 0, 0, null).sendToTarget();
         }
     }
 

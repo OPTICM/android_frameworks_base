@@ -101,8 +101,8 @@ import com.android.systemui.statusbar.phone.PhoneStatusBar;
 import com.android.systemui.statusbar.policy.NotificationRowLayout;
 import com.android.systemui.statusbar.policy.PieController;
 
-import com.android.internal.util.crdroid.TaskUtils;
-import com.android.internal.util.cm.DevUtils;
+import com.android.internal.util.cm.ActionUtils;
+//import com.android.internal.util.crdroid.TaskUtils;
 
 import java.util.ArrayList;
 import java.util.Locale;
@@ -125,8 +125,7 @@ public abstract class BaseStatusBar extends SystemUI implements
     protected static final int MSG_TOGGLE_LAST_APP = 1029;
     protected static final int MSG_TOGGLE_SCREENSHOT = 1030;
     protected static final int MSG_TOGGLE_KILL_APP = 1031;
-    protected static final int MSG_TOGGLE_POWER_MENU = 1032;
-    protected static final int MSG_SET_PIE_TRIGGER_MASK = 1033;
+    protected static final int MSG_SET_PIE_TRIGGER_MASK = 1032;
 
     protected static final boolean ENABLE_HEADS_UP = true;
     // Scores above this threshold should be displayed in heads up mode.
@@ -260,8 +259,6 @@ public abstract class BaseStatusBar extends SystemUI implements
     private boolean mCustomRecent = false;
 
     private int mExpandedDesktopStyle = 0;
-
-    private boolean mCustomRecent = false;
 
     public IStatusBarService getStatusBarService() {
         return mBarService;
@@ -740,13 +737,6 @@ public abstract class BaseStatusBar extends SystemUI implements
     }
 
     @Override
-    public void togglePowerMenu() {
-        int msg = MSG_TOGGLE_POWER_MENU;
-        mHandler.removeMessages(msg);
-        mHandler.sendEmptyMessage(msg);
-    }
-
-    @Override
     public void preloadRecentApps() {
         int msg = MSG_PRELOAD_RECENT_APPS;
         mHandler.removeMessages(msg);
@@ -918,12 +908,6 @@ public abstract class BaseStatusBar extends SystemUI implements
         }
     }
 
-    protected void actionPowerMenu() {
-        Intent intent = new Intent(Intent.ACTION_POWERMENU);
-        mContext.sendBroadcast(intent);
-        //return true;
-    }
-
     protected View.OnTouchListener mRecentsPreloadOnTouchListener = new View.OnTouchListener() {
         // additional optimization when we have software system buttons - start loading the recent
         // tasks on touch down
@@ -1022,7 +1006,7 @@ public abstract class BaseStatusBar extends SystemUI implements
              case MSG_TOGGLE_LAST_APP:
                  if (DEBUG) Log.d(TAG, "toggle last app");
                  cancelPreloadingRecentTasksList();
-                 TaskUtils.toggleLastAppImpl(mContext);
+                 ActionUtils.switchToLastApp(mContext, mCurrentUserId);
                  break;
              case MSG_TOGGLE_SCREENSHOT:
                  if (DEBUG) Slog.d(TAG, "toggle screenshot");
@@ -1031,10 +1015,6 @@ public abstract class BaseStatusBar extends SystemUI implements
              case MSG_TOGGLE_KILL_APP:
                  if (DEBUG) Slog.d(TAG, "toggle kill app");
                  mHandler.post(mKillTask);
-                 break;
-             case MSG_TOGGLE_POWER_MENU:
-                 if (DEBUG) Slog.d(TAG, "toggle power menu");
-                 actionPowerMenu();
                  break;
              case MSG_SET_PIE_TRIGGER_MASK:
                  if (DEBUG) Slog.d(TAG, "set pie trigger mask");
@@ -1092,9 +1072,9 @@ public abstract class BaseStatusBar extends SystemUI implements
     public boolean inflateViews(NotificationData.Entry entry,
             ViewGroup parent, int customTextColor) {
         int minHeight =
-                mContext.getResources().getDimensionPixelSize(R.dimen.notification_min_height);
+                mContext.getResources().getDimensionPixelSize(R.dimen.default_notification_min_height);
         int maxHeight =
-                mContext.getResources().getDimensionPixelSize(R.dimen.notification_max_height);
+                mContext.getResources().getDimensionPixelSize(R.dimen.default_notification_max_height);
         StatusBarNotification sbn = entry.notification;
         RemoteViews contentView = sbn.getNotification().contentView;
         RemoteViews bigContentView = sbn.getNotification().bigContentView;
@@ -1358,6 +1338,7 @@ public abstract class BaseStatusBar extends SystemUI implements
             handleNotificationError(key, notification, "Couldn't create icon: " + ic);
             return null;
         }
+        NotificationData.Entry entry = new NotificationData.Entry(key, notification, iconView);
         // Construct the expanded view.
         if (!inflateViews(entry, mPile, 0)) {
             handleNotificationError(key, notification, "Couldn't expand RemoteViews for: "
@@ -1491,7 +1472,7 @@ public abstract class BaseStatusBar extends SystemUI implements
                     } else {
                         if (DEBUG) Log.d(TAG, "updating the current heads up:" + notification);
                         mInterruptingNotificationEntry.notification = notification;
-                        updateNotificationViews(mInterruptingNotificationEntry, notification);
+                        updateNotificationViews(mInterruptingNotificationEntry, notification, true);
                     }
                 } else if (shouldInterrupt(notification)
                         && panelsEnabled() && !isHeadsUpInSnooze() && mShowHeadsUpUpdates) {
@@ -1557,6 +1538,11 @@ public abstract class BaseStatusBar extends SystemUI implements
 
     private void updateNotificationViews(NotificationData.Entry entry,
             StatusBarNotification notification) {
+        updateNotificationViews(entry, notification, false);
+    }
+
+    private void updateNotificationViews(NotificationData.Entry entry,
+            StatusBarNotification notification, boolean headsUp) {
         final RemoteViews contentView = notification.getNotification().contentView;
         final RemoteViews bigContentView = notification.getNotification().bigContentView;
         // Reapply the RemoteViews
@@ -1568,9 +1554,6 @@ public abstract class BaseStatusBar extends SystemUI implements
         final PendingIntent contentIntent = notification.getNotification().contentIntent;
         if (contentIntent != null) {
             final View.OnClickListener listener = makeClicker(contentIntent,
-                    notification.getPackageName(), notification.getTag(), notification.getId());
-            entry.content.setOnClickListener(listener);
-            entry.floatingIntent = makeClicker(contentIntent,
                     notification.getPackageName(), notification.getTag(), notification.getId());
             entry.content.setOnClickListener(listener);
         } else {
